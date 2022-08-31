@@ -25,15 +25,23 @@ import pytest
 from perceval import BackendFactory, BasicState
 import perceval.components.base_components as comp
 
-
-def test_precision_pcvl_124():
+def test_precision_pcvl_124_enumerate():
     c = comp.SimpleBS()
     sim = BackendFactory().get_backend("Naive")(c.U)
-    input_state = BasicState([30,0])
+    input_state = BasicState([20, 0])
     all_p = 0
     count_state = 0
     for output_state, p in sim.allstateprob_iterator(input_state):
         all_p += p
         count_state += 1
-    assert count_state == 31
+    assert count_state == 21
+    assert pytest.approx(1) == all_p
+
+def test_precision_pcvl_124_naive_manual():
+    c = comp.SimpleBS()
+    sim = BackendFactory().get_backend("Naive")(c.U)
+    input_state = BasicState([20, 0])
+    all_p = 0
+    for i in range(21):
+        all_p += sim.prob(input_state, BasicState([i, 20-i]))
     assert pytest.approx(1) == all_p

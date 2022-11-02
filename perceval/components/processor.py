@@ -158,7 +158,11 @@ class Processor(AProcessor):
             else:
                 if input_state[input_idx] > 0:
                     assert input_state[input_idx] == 1, "processor input can only take one photon per mode"
-                    distribution = self._source.probability_distribution()
+                    # retrieve annotations for the mode
+                    p_annotations = input_state.get_mode_annotations(input_idx)
+                    if p_annotations:
+                        p_annotations = [str(a) for a in p_annotations]
+                    distribution = self._source.probability_distribution(p_annotations)
                     expected_photons += 1
                 input_idx += 1
             self._inputs_map *= distribution  # combine distributions

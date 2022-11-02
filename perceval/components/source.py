@@ -53,8 +53,9 @@ class Source:
         if "discernability_tag" not in self._context:
             self._context["discernability_tag"] = 1
 
-    def probability_distribution(self):
+    def probability_distribution(self, annotations: list[str] = None):
         r"""returns SVDistribution on 1 mode associated to the source
+            :param annotations: give annotations to the main photon
         """
         svd = SVDistribution()
         if self.brightness != 1:
@@ -80,6 +81,6 @@ class Source:
             svd[StateVector([1], {0: ["_:%s" % random_feat]})] = distinguishability*self.brightness*self.purity
             svd[StateVector([1], {0: ["_:0"]})] = (1-distinguishability)*self.brightness*self.purity
         else:
-            svd[StateVector([1])] = (1-distinguishability)*self.brightness*self.purity
+            svd[StateVector([1], {0: annotations})] = (1-distinguishability)*self.brightness*self.purity
 
         return svd

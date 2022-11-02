@@ -157,6 +157,7 @@ class Processor(AProcessor):
                     expected_photons += 1
             else:
                 if input_state[input_idx] > 0:
+                    assert input_state[input_idx] == 1, "processor input can only take one photon per mode"
                     distribution = self._source.probability_distribution()
                     expected_photons += 1
                 input_idx += 1

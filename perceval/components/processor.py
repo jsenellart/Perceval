@@ -31,6 +31,7 @@ from .linear_circuit import ACircuit, Circuit
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .computation import count_TD, count_independant_TD, expand_TD
 from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, global_params, Parameter
+from perceval.utils import Matrix
 from perceval.utils.algorithms.simplification import perm_compose
 from perceval.backends import BACKEND_LIST
 from perceval.backends.processor import StepperBackend
@@ -64,6 +65,7 @@ class Processor(AProcessor):
         self._n_heralds = 0
         self._is_unitary = True
         self._has_td = False
+        self._has_polarization = False
         if isinstance(m_circuit, int):
             self._n_moi = m_circuit  # number of modes of interest (MOI)
         else:
@@ -224,6 +226,7 @@ class Processor(AProcessor):
     def _compose_processor(self, connector, processor, keep_port: bool):
         self._is_unitary = self._is_unitary and processor._is_unitary
         self._has_td = self._has_td or processor._has_td
+        self._has_polarization = self._has_polarization or processor._has_polarization
         mode_mapping = connector.resolve()
         if not keep_port:
             # Remove output ports used to connect the new processor
@@ -283,6 +286,8 @@ class Processor(AProcessor):
         self._components.append((sorted_modes, component))
         self._is_unitary = self._is_unitary and isinstance(component, ACircuit)
         self._has_td = self._has_td or isinstance(component, TD)
+        self._has_polarization = self._has_polarization or component.requires_polarization
+
 
     def _add_herald(self, mode, expected, name=None):
         """
@@ -483,7 +488,7 @@ class Processor(AProcessor):
         self._init_command("probs")
         output = BSDistribution()
         p_logic_discard = 0
-        if not self._has_td:
+        if not self._has_td and not self._has_polarization:
             input_length = len(self._inputs_map)
             physical_perf = 1
 
@@ -506,8 +511,7 @@ class Processor(AProcessor):
                     exec_request = progress_callback(idx/input_length, 'probs')
                     if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                         raise RuntimeError("Cancel requested")
-
-        else:
+        elif self._has_td:
             # Create a bigger processor with no heralds to represent the time delays
             p_comp = _flatten(self)
             TD_number = count_TD(p_comp)
@@ -538,6 +542,15 @@ class Processor(AProcessor):
                 else:
                     p_logic_discard += output_prob
             physical_perf = second_perf * res["physical_perf"]
+        elif self._has_polarization:
+            # if the circuit has polarization we double the size of the circuit - for the moment we don't deal with
+            # heralds - H/V polarization converted into dual rail
+            if self._n_heralds != 0:
+                raise NotImplementedError("polarization with heralds not yet implemented")
+            prep_matrix = Matrix.eye(2*self._n_moi, False)
+
+            assert False, "being implemented"
+
 
         if physical_perf < global_params['min_p']:
             physical_perf = 0

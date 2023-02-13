@@ -35,7 +35,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--m', type=int, required=True, help='number of modes')
 parser.add_argument('--n', type=int, required=True, help='number of photons')
 parser.add_argument('--precision', type=int, default=16, help='precision in calculation - number of digit')
-parser.add_argument('--adaptive_precision', action="store_true", default=False, help='if set, use precision as a offset on the class max prob')
+parser.add_argument('--adaptive_precision', action="store_true", default=False, help='if set, use precision as a offset'
+                                                                                     'on the class max prob')
+parser.add_argument('--max_coincidence', type=int, default=0, help='maximum coincidence order we are interested in'
+                                                                   '(default 0 is the number of input photons)')
 parser.add_argument('--algorithm', type=str, required=True)
 parser.add_argument('--mode_selection', type=int, default=0)
 parser.add_argument('--threshold', action="store_true", default=False, help='use for threshold detector')
@@ -142,8 +145,10 @@ def improved_algorithm_probs():
                 class_max_prob[input_state[0].n] = input_prob
     pbar = tqdm(total=len(QPU._inputs_map), smoothing=0)
     for idx, (input_state, input_prob) in enumerate(QPU._inputs_map.items()):
-        if not QPU._state_preselected_physical(input_state):
-            continue
+        if not QPU._state_preselected_physical(input_state) or \
+                (not args.max_coincidence and input_state[0].n > args.n) or \
+                (args.max_coincidence and input_state[0].n > args.max_coincidence):
+            pass
         else:
             if args.adaptive_precision:
                 global_params['min_p'] = 10**(-args.precision)*class_max_prob[input_state[0].n]

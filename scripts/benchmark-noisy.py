@@ -35,6 +35,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--m', type=int, required=True, help='number of modes')
 parser.add_argument('--n', type=int, required=True, help='number of photons')
 parser.add_argument('--precision', type=int, default=16, help='precision in calculation - number of digit')
+parser.add_argument('--adaptive_precision', action="store_true", default=False, help='if set, use precision as a offset on the class max prob')
 parser.add_argument('--algorithm', type=str, required=True)
 parser.add_argument('--mode_selection', type=int, default=0)
 parser.add_argument('--threshold', action="store_true", default=False, help='use for threshold detector')
@@ -134,11 +135,18 @@ def improved_algorithm_register_probs(QPU, output_distribution, current_prob, in
 def improved_algorithm_probs():
     output_distribution = pcvl.BSDistribution()
     logical_perf = 0
+    if args.adaptive_precision:
+        class_max_prob = {}
+        for idx, (input_state, input_prob) in enumerate(QPU._inputs_map.items()):
+            if input_state[0].n not in class_max_prob or input_prob > class_max_prob[input_state[0].n]:
+                class_max_prob[input_state[0].n] = input_prob
     pbar = tqdm(total=len(QPU._inputs_map), smoothing=0)
     for idx, (input_state, input_prob) in enumerate(QPU._inputs_map.items()):
         if not QPU._state_preselected_physical(input_state):
             continue
         else:
+            if args.adaptive_precision:
+                global_params['min_p'] = 10**(-args.precision)*class_max_prob[input_state[0].n]
             input_states = input_state[0].separate_state()
             input_logic_discard = improved_algorithm_register_probs(QPU,
                                                                     output_distribution,
@@ -163,7 +171,7 @@ print("time for simulation...", end-start)
 print("logical perf", logical_perf, "physical perf", physical_perf)
 
 if args.output_dir:
-    filename = (f"sim{args.m}:{args.n}-p{args.precision}-{args.algorithm}"
+    filename = (f"sim{args.m}:{args.n}-{args.adaptive_precision and 'P' or 'p'}{args.precision}-{args.algorithm}"
                 f"-ms{args.mode_selection}-{args.threshold and 'ts' or 'pnr'}-loss{args.loss}")
     with open(args.output_dir+"/"+filename+".txt", "w") as fw:
         for k, v in output_distribution.items():

@@ -245,10 +245,10 @@ def improved_algorithm_probs():
             for k in range(2, len(c_output_to_combine)):
                 max_p[-k] = c_output_to_combine[-k]["max_p"] * max_p[-k+1]
             # now we just need to combine these output states while preserving the truncated probability
-            #input_logic_discard = improved_algorithm_register_combine(input_state[0].n, args.m, QPU, input_prob,
-            #                                                          output_distribution, c_output_to_combine,
-            #                                                          [0]*args.m, max_p, class_max_prob)
-            #logical_perf += input_logic_discard
+            input_logic_discard = improved_algorithm_register_combine(input_state[0].n, args.m, QPU, input_prob,
+                                                                      output_distribution, c_output_to_combine,
+                                                                      [0]*args.m, max_p, class_max_prob)
+            logical_perf += input_logic_discard
             ncombine += 1
             lcombine+=len(c_output_to_combine)
             dcombine+=sum([len(m["outputs"]) for m in c_output_to_combine])/len(c_output_to_combine)
